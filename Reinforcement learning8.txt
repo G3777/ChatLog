@@ -2948,3 +2948,80 @@ if __name__ == "__main__":
 
 
 This updated version moves the agent and hidden states to the device (GPU or CPU) using .to(device). This ensures compatibility with both GPU and CPU devices.
+--------------------------
+Fix AttributeError: 'tuple' object has no attribute 'to'
+--------------------------
+My apologies for the oversight. You should move each hidden state tensor to the device separately. Here's the corrected code snippet:
+
+python
+Copy code
+            hidden = (agent.init_hidden()[0].to(device), agent.init_hidden()[1].to(device))
+            episode_reward = 0
+
+            while True:
+                state = torch.tensor(obs[0].observation.feature_screen, dtype=torch.float32).view(-1).to(device)
+
+                # Choose action
+                with torch.no_grad():
+                    action_logits, goal, hidden = agent(state, hidden)
+                    action = torch.argmax(action_logits).item()
+
+                # Epsilon-greedy exploration
+                if random.random() < epsilon:
+                    action = random.choice(obs[0].observation.available_actions)
+                else:
+                    action = torch.argmax(action_logits).item()
+
+                # Execute action
+                if action in obs[0].observation.available_actions:
+                    obs_next = env.step(actions=[actions.FunctionCall(action, [])])
+                    reward = obs_next[0].reward
+                else:
+                    reward = 0
+
+                episode_reward += reward
+
+                # Store experience in replay buffer
+                next_state = torch.tensor(obs_next[0].observation.feature_screen, dtype=torch.float32).view(-1).to(device)
+                replay_buffer.add((state, action, reward, next_state))
+
+                # Update agent
+                if len(replay_buffer) >= batch_size and global_step % update_frequency == 0:
+                    # Sample a batch of experiences
+                    experiences = replay_buffer.sample(batch_size)
+                    states, actions, rewards, next_states = zip(*experiences)
+
+                    states = torch.stack(states).to(device)
+                    actions = torch.tensor(actions, dtype=torch.long).view(-1, 1).to(device)
+                    rewards = torch.tensor(rewards, dtype=torch.float32).view(-1, 1).to(device)
+                    next_states = torch.stack(next_states).to(device)
+
+                    # Update agent using sampled experiences
+                    optimizer.zero_grad()
+                    q_values, _, _ = agent(states, hidden)
+                    q_values = q_values.gather(1, actions)
+
+                    with torch.no_grad():
+                        q_values_next, _, _ = agent(next_states, hidden)
+                        q_values_next = q_values_next.max(1)[0].unsqueeze(1)
+
+                    target_values = rewards + q_values_next
+                    loss = nn.MSELoss()(q_values, target_values)
+
+                    loss.backward()
+                    optimizer.step()
+
+                obs = obs_next
+                global_step += 1
+
+                if obs[0].step_type == sc2_env.StepType.LAST:
+                    break
+
+            epsilon = max(epsilon_min, epsilon_decay * epsilon)
+            print("Episode {}: Total reward = {}".format(episode + 1, episode_reward))
+
+if __name__ == "__main__":
+    app.run(main)
+
+
+In this updated version, we separately move each hidden state tensor to the device using (agent.init_hidden()[0].to(device), agent.init_hidden()[1].to(device)). This should fix the AttributeError.
