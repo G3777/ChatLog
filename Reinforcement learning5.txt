@@ -1338,6 +1338,7 @@ action_values, _ = agent_network(state_sequence, hidden)  # 通过网络传播�
 
 这样，我们就可以根据网络输出的动作值来选择和执行动作。在实际强化学习场景中，智能体将利用这个网络来处理具有时间序列信息的状态空间，并根据网络输出的动作值进行学习和决策。
 --------------------------
+3 / 3
 强化学习，LSTM，H-DQN案例，Python
 --------------------------
 在这个示例中，我们将展示如何在Hierarchical Deep Q-Network（H-DQN）中使用LSTM处理状态空间中的时间序列信息。H-DQN 是一种分层强化学习算法，包括两个层次的DQN网络：一个元控制器（Meta-controller）和一个控制器（Controller）。我们将在控制器中使用LSTM来处理时间序列数据。
@@ -1942,3 +1943,238 @@ python sc2_terran_ai.py
 
 
 This script initializes a StarCraft II environment with a Terran agent and a very easy random bot as an opponent. The agent will use the H-DQN algorithm to select goals and actions. Note that this is still a basic example, and the agent may not perform well. To improve the agent's performance, you will need to spend time optimizing the state and action spaces, the network architecture, and the training process.
+--------------------------
+Have got runtimeError: For unbatched 2-D input, hx and cx should also be 2-D but got (3-D, 3-D) tensors, how to fix it?
+--------------------------
+The error you're encountering is related to the input dimensions of your LSTM. When you pass the input to the LSTM, make sure that the hidden state hx and cell state cx have the same dimensions as your input. In the case of unbatched input, you should pass 2D tensors for hx and cx.
+
+For example, let's say you have an LSTM with an input size of input_size, a hidden size of hidden_size, and a single layer:
+
+python
+Copy code
+lstm = nn.LSTM(input_size, hidden_size, num_layers=1)
+
+
+To pass an unbatched input to this LSTM, you should create an input tensor of shape (1, input_size) and initial hidden and cell states of shape (1, hidden_size):
+
+python
+Copy code
+input_tensor = torch.randn(1, input_size)  # Unbatched input tensor
+hx = torch.zeros(1, hidden_size)  # Initial hidden state
+cx = torch.zeros(1, hidden_size)  # Initial cell state
+
+output, (hx, cx) = lstm(input_tensor.unsqueeze(0), (hx.unsqueeze(0), cx.unsqueeze(0)))
+
+
+In the example above, we use unsqueeze(0) to add an additional dimension to the input, hidden state, and cell state tensors. This is because LSTMs in PyTorch expect input in the shape (seq_len, batch, input_size) and hidden states in the shape (num_layers, batch, hidden_size). By adding the extra dimension, we ensure that the input and hidden states have the correct shape for the LSTM.
+
+If you're still encountering the error, please check your code for any inconsistencies in the dimensions of the input, hidden state, and cell state tensors. Make sure that they all have the correct shapes before passing them to the LSTM.
+--------------------------
+RuntimeError: For unbatched 2-D input, hx and cx should also be 2-D but got (3-D, 3-D) tensors 是什么情况？需要如何处理？
+--------------------------
+这个错误与您的LSTM输入维度有关。在将输入传递给LSTM时，请确保隐藏状态hx和细胞状态cx具有与输入相同的维度。对于非批量输入，您应该为hx和cx传递2D张量。
+
+例如，假设您有一个具有输入大小input_size，隐藏大小hidden_size和单层的LSTM：
+
+python
+Copy code
+lstm = nn.LSTM(input_size, hidden_size, num_layers=1)
+
+
+要将非批量输入传递给此LSTM，您应该创建形状为(1, input_size)的输入张量以及形状为(1, hidden_size)的初始隐藏和细胞状态：
+
+python
+Copy code
+input_tensor = torch.randn(1, input_size)  # 非批量输入张量
+hx = torch.zeros(1, hidden_size)  # 初始隐藏状态
+cx = torch.zeros(1, hidden_size)  # 初始细胞状态
+
+output, (hx, cx) = lstm(input_tensor.unsqueeze(0), (hx.unsqueeze(0), cx.unsqueeze(0)))
+
+
+在上面的示例中，我们使用unsqueeze(0)为输入、隐藏状态和细胞状态张量添加一个额外的维度。这是因为PyTorch中的LSTM期望输入的形状为(seq_len, batch, input_size)，隐藏状态的形状为(num_layers, batch, hidden_size)。通过添加额外的维度，我们确保了输入和隐藏状态具有适当的形状以用于LSTM。
+
+如果您仍然遇到错误，请检查代码中输入、隐藏状态和细胞状态张量维度的任何不一致。在将它们传递给LSTM之前，请确保它们都具有正确的形状。
+--------------------------
+5 / 5
+Class a LSTM,reinforcement learning,PySC2,in Python
+--------------------------
+Here's a basic example of using LSTM with reinforcement learning in a PySC2 environment. In this example, we will use a simple LSTM network for an agent that selects actions based on its hidden state. This example is not optimized and may not perform well in the game, but it serves as a starting point.
+
+python
+Copy code
+import os
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from collections import deque
+from pysc2.env import sc2_env
+from pysc2.lib import actions, features
+from absl import app
+
+# Set your custom StarCraft II installation path
+starcraft_install_path = "C:\\path\\to\\your\\StarCraftII\\installation"
+os.environ["SC2PATH"] = starcraft_install_path
+
+class LSTMAgent(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(LSTMAgent, self).__init__()
+        self.hidden_size = hidden_size
+        self.lstm = nn.LSTM(input_size, hidden_size)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x, hidden):
+        lstm_out, hidden = self.lstm(x.view(1, 1, -1), hidden)
+        output = self.fc(lstm_out.view(1, -1))
+        return output, hidden
+
+    def init_hidden(self):
+        return (torch.zeros(1, 1, self.hidden_size), torch.zeros(1, 1, self.hidden_size))
+
+def main(unused_argv):
+    with sc2_env.SC2Env(
+            map_name="Simple64",
+            players=[sc2_env.Agent(sc2_env.Race.terran), sc2_env.Bot(sc2_env.Race.random, sc2_env.Difficulty.very_easy)],
+            agent_interface_format=features.AgentInterfaceFormat(
+                feature_dimensions=features.Dimensions(screen=84, minimap=64),
+                use_feature_units=True
+            ),
+            step_mul=8,
+            game_steps_per_episode=0,
+            visualize=True
+        ) as env:
+
+        agent = LSTMAgent(input_size=84 * 64, hidden_size=128, output_size=len(actions.FUNCTIONS))
+        optimizer = optim.Adam(agent.parameters(), lr=0.001)
+
+        for episode in range(10):
+            obs = env.reset()
+            hidden = agent.init_hidden()
+            episode_reward = 0
+
+            while True:
+                state = torch.tensor(obs[0].observation.feature_screen, dtype=torch.float32).view(-1)
+
+                # Choose action
+                with torch.no_grad():
+                    action_logits, hidden = agent(state, hidden)
+                action = torch.argmax(action_logits).item()
+
+                # Execute action
+                if action in obs[0].observation.available_actions:
+                    obs = env.step(actions=[actions.FunctionCall(action, [])])
+                    reward = obs[0].reward
+                else:
+                    reward = 0
+
+                episode_reward += reward
+
+                if obs[0].step_type == sc2_env.StepType.LAST:
+                    break
+
+            print("Episode {} reward: {}".format(episode, episode_reward))
+
+if __name__ == "__main__":
+    app.run(main)
+
+
+Replace "C:\\path\\to\\your\\StarCraftII\\installation" with the correct path to your StarCraft II installation folder. Remember to use double backslashes \\ in the path, as single backslashes are treated as escape characters in Python strings.
+
+In this example, we create a simple LSTMAgent class that takes the screen features as input, processes them through an LSTM layer, and outputs action logits. The agent selects actions based on the logits, and the environment is
+--------------------------
+2 / 2
+How to fix 'RuntimeError: input.size(-1) must be equal to input_size. Expected 21178, got 21169'
+--------------------------
+The RuntimeError you're encountering is because the input size of the LSTM layer does not match the expected input size. In your specific case, the LSTM expects an input size of 21178, but it receives an input of size 21169.
+
+To fix this issue, first make sure you have correctly calculated the input size for your LSTM. The input size should match the size of the input features you are passing to the LSTM. For example, if you're using a flattened screen feature with dimensions 84x64, the input size should be 84 * 64 = 5376.
+
+Once you have identified the correct input size, you can update the LSTM's input size when initializing the model. Here's an example of how to do that:
+
+python
+Copy code
+class LSTMAgent(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(LSTMAgent, self).__init__()
+        self.hidden_size = hidden_size
+        self.lstm = nn.LSTM(input_size, hidden_size)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+
+When creating an instance of the LSTMAgent class, make sure to pass the correct input size:
+
+python
+Copy code
+input_size = 5376  # Update this value based on your input features
+hidden_size = 128
+output_size = len(actions.FUNCTIONS)
+
+agent = LSTMAgent(input_size, hidden_size, output_size)
+
+
+By ensuring that you pass the correct input size when initializing your LSTM, you should no longer encounter the 'RuntimeError'.
+--------------------------
+2 / 2
+Reinforcement learning,LSTM,relu,H-DQN, in Python
+--------------------------
+Here's an example of how to create a simple reinforcement learning agent using LSTM, ReLU activation, and the H-DQN architecture in Python. This example uses a hypothetical environment and is not specific to any particular problem, but it should serve as a starting point for building your own custom agent.
+
+python
+Copy code
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# Environment and Agent Parameters
+state_size = 128
+hidden_size = 256
+action_size = 10
+num_goals = 5
+goal_size = 64
+
+class HDQN(nn.Module):
+    def __init__(self, state_size, goal_size, hidden_size, action_size):
+        super(HDQN, self).__init__()
+        self.state_size = state_size
+        self.goal_size = goal_size
+        self.hidden_size = hidden_size
+        self.action_size = action_size
+
+        self.meta_controller = nn.Sequential(
+            nn.Linear(state_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, goal_size)
+        )
+
+        self.controller = nn.Sequential(
+            nn.Linear(state_size + goal_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, action_size)
+        )
+
+    def forward(self, state, goal=None):
+        if goal is None:
+            goal = self.meta_controller(state)
+        action = self.controller(torch.cat((state, goal), dim=-1))
+        return action, goal
+
+
+# Example usage
+agent = HDQN(state_size, goal_size, hidden_size, action_size)
+optimizer = optim.Adam(agent.parameters(), lr=0.001)
+
+state = torch.randn(1, state_size)
+action, goal = agent(state)
+
+print("Action:", action)
+print("Goal:", goal)
+
+
+In this example, we create a basic H-DQN agent with two parts: a meta-controller and a controller. The meta-controller takes the current state as input and outputs a goal. The controller takes the current state and the goal as input, and outputs an action. The agent uses an LSTM layer followed by ReLU activation.
+
+Please note that this is just a basic example and does not include the full reinforcement learning loop, exploration strategy, or integration with a specific environment. You would need to implement these components yourself when applying the agent to a particular problem.
