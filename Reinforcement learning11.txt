@@ -3989,3 +3989,60 @@ def main(unused_argv):
 
 
 I removed the LSTM layer and replaced it with a simple feedforward neural network for the controller. The forward function now takes only the state and goal (if any) as input and does not require the hidden state. The rest of the main function remains the same, with the exception of the lines related to the hidden state, which have been removed.
+--------------------------
+Fix raise AttributeError("'{}' object has no attribute '{}'".format(
+AttributeError: 'HDQN' object has no attribute 'init_hidden'
+--------------------------
+I apologize for the oversight. Since the LSTM has been removed from the HDQN model, the 'init_hidden' function is no longer needed. You can remove the lines related to 'hidden' in the main function. Here is the updated main function:
+
+python
+Copy code
+def main(unused_argv):
+    with sc2_env.SC2Env(
+        # ... (rest of the code above remains the same)
+    ) as env:
+
+        agent = HDQN(state_size, goal_size, hidden_size, action_size).to(device)
+        optimizer = optim.Adam(agent.parameters(), lr=0.001)
+
+        replay_buffer = ReplayBuffer(replay_buffer_size)
+        epsilon = epsilon_start
+
+        global_step = 0
+        for episode in range(num_episodes):
+            obs = env.reset()
+            episode_reward = 0
+
+            while True:
+                state = torch.tensor(obs[0].observation.feature_screen, dtype=torch.float32).view(-1).to(device)
+
+                # Choose action
+                with torch.no_grad():
+                    action_logits, goal = agent(state)
+                    action = torch.argmax(action_logits).item()
+
+                # Epsilon-greedy exploration
+                if random.random() < epsilon:
+                    selected_action = random.choice(obs[0].observation.available_actions)
+                else:
+                    selected_action = torch.argmax(action_logits).item()
+
+                # Execute action
+                if selected_action in obs[0].observation.available_actions:
+                    obs_next = env.step(actions=[actions.FunctionCall(selected_action, [])])
+                    reward = obs_next[0].reward
+                else:
+                    reward = 0
+
+                episode_reward += reward
+
+                # Store experience in replay buffer
+                next_state = torch.tensor(obs_next[0].observation.feature_screen, dtype=torch.float32).view(-1).to(device)
+                replay_buffer.add((state, selected_action, reward, next_state))
+
+                # Update agent
+                if len(replay_buffer) >= batch_size and global_step % update_frequency == 0:
+                    # ... (rest of the code below remains the same)
+
+
+In this updated code, I have removed the lines related to 'hidden' since the model no longer requires it.
