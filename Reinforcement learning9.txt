@@ -3483,4 +3483,25 @@ if __name__ == "__main__":
     app.run(main)
 
 
-I've reviewed the code, and it looks complete now. This script sets up a StarCraft II environment and trains a Hierarchical DQN agent to learn and perform actions in the game. The agent uses an epsilon-g
+I've reviewed the code, and it looks complete now. This script sets up a StarCraft II environment and trains a Hierarchical DQN agent to learn and perform actions in the game. The agent uses an epsilon-greedy exploration strategy and a replay buffer to store experiences for training.
+--------------------------
+Have got RuntimeError: For unbatched 2-D input, hx and cx should also be 2-D but got (3-D, 3-D) tensors, please fix it
+--------------------------
+Apologies for the oversight. The error is due to the dimensions of the hidden state tensors being incompatible with the expected dimensions in the LSTM layer.
+
+To fix this issue, we need to change the hidden state tensor dimensions from 3-D to 2-D. Modify the init_hidden function in the HDQN class as follows:
+
+python
+Copy code
+def init_hidden(self):
+    return (torch.zeros(1, self.hidden_size), torch.zeros(1, self.hidden_size))
+
+
+Next, update the line where you initialize the hidden state in the main loop:
+
+python
+Copy code
+hidden = (agent.init_hidden()[0].to(device).unsqueeze(0), agent.init_hidden()[1].to(device).unsqueeze(0))
+
+
+The updated code should now work correctly.
