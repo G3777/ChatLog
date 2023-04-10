@@ -3505,3 +3505,31 @@ hidden = (agent.init_hidden()[0].to(device).unsqueeze(0), agent.init_hidden()[1]
 
 
 The updated code should now work correctly.
+--------------------------
+obs_next = env.step(actions=[actions.FunctionCall(action, [])])
+UnboundLocalError: local variable 'actions' referenced before assignment. Fix it please
+--------------------------
+I apologize for the confusion. The error is caused by the variable name 'actions' being used for both the module import and the chosen action in the main loop. To resolve this issue, simply change the variable name in the main loop from 'actions' to 'selected_action'. Here's the updated code snippet:
+
+python
+Copy code
+# Choose action
+with torch.no_grad():
+    action_logits, goal, hidden = agent(state, hidden)
+    action = torch.argmax(action_logits).item()
+
+# Epsilon-greedy exploration
+if random.random() < epsilon:
+    selected_action = random.choice(obs[0].observation.available_actions)
+else:
+    selected_action = torch.argmax(action_logits).item()
+
+# Execute action
+if selected_action in obs[0].observation.available_actions:
+    obs_next = env.step(actions=[actions.FunctionCall(selected_action, [])])
+    reward = obs_next[0].reward
+else:
+    reward = 0
+
+
+Now, the code should work without raising an UnboundLocalError.
