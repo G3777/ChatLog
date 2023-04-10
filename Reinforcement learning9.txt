@@ -3533,3 +3533,104 @@ else:
 
 
 Now, the code should work without raising an UnboundLocalError.
+--------------------------
+Still have the problem, please review it.
+--------------------------
+I apologize for the oversight. I realize that the issue is not fully resolved. Let's change the variable name in the entire main loop to avoid any conflict. Here's the updated main loop with the variable name changed from 'actions' to 'selected_action':
+
+python
+Copy code
+# Main Function
+def main(unused_argv):
+    ...
+    while True:
+        ...
+        # Choose action
+        with torch.no_grad():
+            action_logits, goal, hidden = agent(state, hidden)
+            action = torch.argmax(action_logits).item()
+
+        # Epsilon-greedy exploration
+        if random.random() < epsilon:
+            selected_action = random.choice(obs[0].observation.available_actions)
+        else:
+            selected_action = torch.argmax(action_logits).item()
+
+        # Execute action
+        if selected_action in obs[0].observation.available_actions:
+            obs_next = env.step(actions=[actions.FunctionCall(selected_action, [])])
+            reward = obs_next[0].reward
+        else:
+            reward = 0
+
+        ...
+        # Store experience in replay buffer
+        replay_buffer.add((state, selected_action, reward, next_state))
+
+        # Update agent
+        if len(replay_buffer) >= batch_size and global_step % update_frequency == 0:
+            ...
+            actions_tensor = torch.tensor(selected_actions, dtype=torch.long).view(-1, 1).to(device)
+            ...
+
+            q_values = q_values.gather(1, actions_tensor)
+
+        ...
+
+    ...
+
+
+Now, the code should work without raising an UnboundLocalError. Please make sure to use the name 'selected_action' consistently throughout the main loop to avoid any conflicts.
+--------------------------
+2 / 2
+Same problem, please check it again.
+--------------------------
+I apologize for the confusion. The issue was in my response, as I missed changing one instance of the variable name. Please find the corrected main loop below:
+
+python
+Copy code
+# Main Function
+def main(unused_argv):
+    ...
+    while True:
+        ...
+        # Choose action
+        with torch.no_grad():
+            action_logits, goal, hidden = agent(state, hidden)
+            action = torch.argmax(action_logits).item()
+
+        # Epsilon-greedy exploration
+        if random.random() < epsilon:
+            selected_action = random.choice(obs[0].observation.available_actions)
+        else:
+            selected_action = torch.argmax(action_logits).item()
+
+        # Execute action
+        if selected_action in obs[0].observation.available_actions:
+            obs_next = env.step(actions=[actions.FunctionCall(selected_action, [])])
+            reward = obs_next[0].reward
+        else:
+            reward = 0
+
+        ...
+        # Store experience in replay buffer
+        replay_buffer.add((state, selected_action, reward, next_state))
+
+        # Update agent
+        if len(replay_buffer) >= batch_size and global_step % update_frequency == 0:
+            ...
+            actions_tensor = torch.tensor(actions, dtype=torch.long).view(-1, 1).to(device)
+            ...
+
+            q_values = q_values.gather(1, actions_tensor)
+
+        ...
+
+    ...
+
+
+This should resolve the issue with the UnboundLocalError. Make sure to use the name 'selected_action' consistently throughout the main loop to avoid any conflicts.
+--------------------------
+2 / 2
+--------------------------
+I hope the updated code resolves the issue you were facing. If you have any other questions or need further assistance, please feel free to ask. Good luck with your
