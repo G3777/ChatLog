@@ -1,0 +1,90 @@
+Use https://github.com/Sentdex/SC2RL to write an AI that includes LSTM,ReLU,HDQN
+--------------------------
+To create an AI for StarCraft II using the SC2RL repository that incorporates LSTM, ReLU, and HDQN, follow these steps:
+
+Clone the SC2RL repository:
+bash
+Copy code
+git clone https://github.com/Sentdex/SC2RL.git
+cd SC2RL
+
+Install the dependencies:
+Copy code
+pip install -r requirements.txt
+
+Create a new Python file called custom_agent.py in the root of the repository:
+python
+Copy code
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sc2rl.rl.networks.rnn import RNN
+from sc2rl.rl.agents.hdqn_agent import HierarchicalDQNAgent
+from sc2rl.rl.brains import HDQNBrain
+from sc2rl.rl.modules.rnn import get_mask_from_lengths
+from sc2rl.rl.networks.fully_connected import FullyConnected
+from sc2rl.config.graph_configs import NODE_ALLY
+from sc2rl.rl.maskers import get_node_masking_func
+from sc2rl.rl.networks.norm import hardcode_norm
+from sc2rl.rl.networks.noisy_layer import NoisyLinear
+
+
+class CustomHDQN(nn.Module):
+    def __init__(self, config):
+        super(CustomHDQN, self).__init__()
+        self.config = config
+        self.lstm = RNN(256, 256, num_layers=1, rnn_type="LSTM")
+        self.relu = nn.ReLU()
+        self.noisy_linear = NoisyLinear(256, 256)
+
+    def forward(self, hidden_states, rnn_hiddens, sequence_length):
+        mask = get_mask_from_lengths(sequence_length)
+        out, new_rnn_hiddens = self.lstm(hidden_states, rnn_hiddens, mask)
+        out = self.relu(out)
+        q_values = self.noisy_linear(out)
+        return q_values, new_rnn_hiddens
+
+
+def main():
+    config = {
+        "brain": {
+            "num_neurons": 256,
+            "num_layers": 1,
+            "rnn_type": "LSTM",
+            "use_hold": True,
+            "use_tanh": True,
+            "norm_fn": hardcode_norm,
+            "masking_fn": get_node_masking_func(NODE_ALLY)
+        },
+        "optimizer": {
+            "lr": 1e-4,
+            "weight_decay": 1e-5
+        },
+        "agent": {
+            "eps_start": 1.0,
+            "eps_end": 0.1,
+            "eps_decay": 0.999,
+            "buffer_size": int(1e4),
+            "batch_size": 32,
+            "update_interval": 1,
+            "tau": 0.001,
+            "learn_start": 100,
+            "clip_grad_norm": 1.0,
+            "save_interval": 50
+        }
+    }
+
+    model = CustomHDQN(config)
+    target_model = CustomHDQN(config)
+    brain = HDQNBrain(config["brain"], model, target_model)
+    optimizer = optim.Adam(brain.parameters(), **config["optimizer"])
+    agent = HierarchicalDQNAgent(brain, optimizer, **config["agent"])
+
+    # Train and run your agent using the SC2RL framework
+    # Refer to the example provided in the repository: https://github.com/Sentdex/SC2RL/blob/master/examples/train_mineral_sharing.py
+
+
+if __name__ == "__main__":
+    main()
+
+Implement the main loop and training code using the agent object as shown in the example provided in the SC2RL repository: https://github.com/Sentdex/SC2
