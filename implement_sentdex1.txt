@@ -335,3 +335,25 @@ if __name__ == "__main__":
 
 
 This script imports the CustomHDQN, HierarchicalDQNAgent, and HDQNBrain classes from the custom_agent.py file and uses them to create a new agent with LSTM, ReLU, and HDQN components. The rest of the script remains unchanged, and you can run the modified train_mineral_sharing.py to train the agent using
+--------------------------
+Can it be ran on Starcraft 2? Optimize it if it is not.
+--------------------------
+Yes, the modified train_mineral_sharing.py script can be run on StarCraft II using the PySC2 interface. The SC2RL framework is built on top of the PySC2 library, which is specifically designed for interacting with StarCraft II environments.
+
+However, to run this on StarCraft II, you need to have the game installed on your machine and have the PySC2 library set up. Follow these steps to install and set up PySC2:
+
+Install the PySC2 library:
+Copy code
+pip install pysc2
+
+
+Download StarCraft II and install it on your machine. You can download the game from the official Blizzard website: https://starcraft2.com/en-us/
+
+Download the StarCraft II maps required for training and extract them into the correct folder:
+
+Download link: https://github.com/deepmind/pysc2/releases/download/v1.0/mini_games.zip
+Extract the downloaded mini_games folder into your StarCraft II installation's Maps folder. The path should look like this: <StarCraft II installation folder>/Maps/mini_games/
+
+After completing these steps, you can run the modified train_mineral_sharing.py script, and it will interact with the StarCraft II game for training the agent using the PySC2 interface.
+
+Keep in mind that training an RL agent for StarCraft II can be computationally intensive and might require a powerful machine, especially if you're using a GPU for training. Make sure your machine meets the recommended hardware requirements for running StarCraft II and deep learning workloads.

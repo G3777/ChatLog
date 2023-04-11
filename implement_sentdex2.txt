@@ -1,0 +1,130 @@
+2 / 2
+Use https://github.com/Sentdex/SC2RL to write an AI that includes LSTM,ReLU,HDQN
+--------------------------
+To create an AI for StarCraft II using the Sentdex's SC2RL repository, which leverages LSTM, ReLU, and HDQN, follow these steps:
+
+Clone the SC2RL repository:
+bash
+Copy code
+git clone https://github.com/Sentdex/SC2RL.git
+cd SC2RL
+
+Install the required packages:
+Copy code
+pip install -r requirements.txt
+
+Create the custom AI with LSTM, ReLU, and HDQN:
+First, create a new file called lstm_relu_hdqn_agent.py in the agents folder. This will be your custom agent.
+Then, add the following code:
+python
+Copy code
+import numpy as np
+import torch
+import torch.nn as nn
+from torch.optim import Adam
+from sc2rl.memory.n_step_memory import NstepInputMemory
+from sc2rl.rl.modules.HierarchicalMultiStepQnet import HierarchicalMultiStepInputQnet
+from sc2rl.rl.brains import HDQNBrain
+from sc2rl.rl.agents import Agent
+
+class CustomAgent(Agent):
+
+    def __init__(self,
+                 conf,
+                 agent_conf,
+                 hdqn_conf,
+                 lstm_hidden_size,
+                 lstm_num_layers,
+                 use_noisy_q=False,
+                 use_rnd=False,
+                 memory_conf=None,
+                 gpu=False):
+
+        super(CustomAgent, self).__init__()
+
+        self.memory_conf = memory_conf
+        self.memory = NstepInputMemory(memory_conf)
+        self.use_cuda = gpu
+
+        self.qnet_conf = conf.copy()
+        self.qnet_conf.update(hdqn_conf)
+        self.qnet_conf['qnet_conf']['lstm_hidden_size'] = lstm_hidden_size
+        self.qnet_conf['qnet_conf']['lstm_num_layers'] = lstm_num_layers
+        self.qnet_conf['qnet_conf']['use_noisy_q'] = use_noisy_q
+        self.qnet_conf['qnet_conf']['use_rnd'] = use_rnd
+
+        self.qnet = HierarchicalMultiStepInputQnet(self.qnet_conf['qnet_conf'])
+        self.target_qnet = HierarchicalMultiStepInputQnet(self.qnet_conf['qnet_conf'])
+
+        if self.use_cuda:
+            self.qnet.cuda()
+            self.target_qnet.cuda()
+
+        self.brain = HDQNBrain(self.qnet_conf['brain_conf'],
+                                qnet=self.qnet,
+                                target_qnet=self.target_qnet,
+                                memory_conf=self.memory_conf)
+
+        self.optim = Adam(self.qnet.parameters(), lr=self.qnet_conf['brain_conf']['lr'])
+
+        self.qnet.train()
+        self.target_qnet.train()
+
+        self.conf = conf
+        self.agent_conf = agent_conf
+
+    def get_action(self, info):
+        """
+        Implement your own policy here.
+        """
+        pass
+
+    def learn(self, experience):
+        """
+        Implement your own learning method here.
+        """
+        pass
+
+Modify the HierarchicalMultiStepInputQnet class to add LSTM and ReLU:
+Open the sc2rl/rl/modules/HierarchicalMultiStepQnet.py file.
+Modify the HierarchicalMultiStepInputQnet class to include an LSTM layer and ReLU activation functions as needed.
+
+Implement your custom policy and learning methods in get_action() and learn() methods of your CustomAgent class.
+
+After implementing your custom agent, update the main training script to use your new agent. In the train.py file, import your new agent and replace the existing agent instantiation with your custom agent.
+
+Run the train.py script to train your custom StarCraft II AI with LSTM, ReLU, and HD
+--------------------------
+2 / 2
+then?
+
+--------------------------
+After implementing your custom StarCraft II AI with LSTM, ReLU, and HDQN, you'll want to train and evaluate its performance. Here's how:
+
+Train the AI:
+
+To start training your custom AI, run the train.py script. Make sure you have set the appropriate configuration for your custom agent, environment, and training parameters.
+
+Copy code
+python train.py
+
+
+Depending on the complexity of your AI and the computational resources available, training may take a while. You can monitor the training progress by checking the console output or any logging system you've implemented.
+
+Evaluate the AI:
+
+Once your AI has finished training, you'll want to evaluate its performance in the StarCraft II environment. You can create a separate script, evaluate.py, to assess your AI against various opponents or scenarios.
+
+In the evaluation script, load the saved model from the training phase and instantiate your custom agent. You will need to set your agent to evaluation mode (if applicable) and create a StarCraft II environment for testing. Then, run multiple episodes to gauge your AI's performance.
+
+Fine-tune and iterate:
+
+Based on the evaluation results, you may need to fine-tune your AI's hyperparameters or make other adjustments to improve its performance. This process often involves multiple iterations of training and evaluation.
+
+Visualize and analyze results:
+
+Consider visualizing the training and evaluation results to gain insights into your AI's behavior and performance. You can use various tools and libraries, such as TensorBoard or Matplotlib, to create plots and graphs that display important metrics, like rewards, losses, and win rates.
+
+Share your work:
+
+Once you are satisfied with your AI's performance, consider sharing your work with the community. You can create a GitHub repository to share your code, provide documentation on your project, and write a blog post or paper to discuss your findings, challenges, and successes. By sharing your work, you can contribute to the collective knowledge of the community and inspire others to create their own StarCraft II AIs.
