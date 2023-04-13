@@ -1,0 +1,659 @@
+3 / 3
+Write a StarCraft2 bot with if iteration action in Python
+
+--------------------------
+Creating a full StarCraft 2 bot is a complex task and requires significant knowledge of the game and its mechanics. However, I can provide you with a basic example of a bot using the python-sc2 library, which is a Python wrapper for the StarCraft II API. This example will only showcase simple actions with if-iteration.
+
+First, you'll need to install the python-sc2 library:
+
+Copy code
+pip install sc2
+
+
+Here's a simple example of a bot that trains SCVs and builds Supply Depots:
+
+python
+Copy code
+import random
+from sc2 import run_game, maps, Race, Difficulty
+from sc2.player import Bot, Computer
+from sc2.constants import COMMANDCENTER, SCV, SUPPLYDEPOT
+
+class SimpleBot(sc2.BotAI):
+    async def on_step(self, iteration):
+        await self.distribute_workers()  # Automatically distribute worker mining
+        await self.train_scv()
+        await self.build_supply_depot()
+
+    async def train_scv(self):
+        for cc in self.units(COMMANDCENTER).ready.noqueue:
+            if self.can_afford(SCV) and self.supply_left > 0:
+                await self.do(cc.train(SCV))
+
+    async def build_supply_depot(self):
+        if self.supply_left < 5 and not self.already_pending(SUPPLYDEPOT):
+            cc = self.units(COMMANDCENTER).ready
+            if cc.exists:
+                if self.can_afford(SUPPLYDEPOT):
+                    await self.build(SUPPLYDEPOT, near=cc.first.position.towards(self.game_info.map_center, 5))
+
+def main():
+    run_game(maps.get("AbyssalReefLE"), [
+        Bot(Race.Terran, SimpleBot()),
+        Computer(Race.Zerg, Difficulty.Easy)
+    ], realtime=True)
+
+if __name__ == "__main__":
+    main()
+
+
+This bot will distribute workers for mining, train SCVs at the Command Center if there's enough supply, and build Supply Depots if the supply is running low. To make a competitive StarCraft 2 bot, you would need to implement more advanced game strategies, unit management, and decision-making.
+--------------------------
+Add Scout and attack function
+--------------------------
+To add scouting and attacking functions to the SimpleBot example, you can modify the class as follows:
+
+python
+Copy code
+from sc2.constants import BARRACKS, MARINE
+
+class SimpleBot(sc2.BotAI):
+    async def on_step(self, iteration):
+        await self.distribute_workers()  # Automatically distribute worker mining
+        await self.train_scv()
+        await self.build_supply_depot()
+        await self.build_barracks()
+        await self.train_marine()
+        await self.scout()
+        await self.attack()
+
+    async def build_barracks(self):
+        if not self.units(BARRACKS).ready.exists and not self.already_pending(BARRACKS):
+            if self.can_afford(BARRACKS):
+                await self.build(BARRACKS, near=self.units(COMMANDCENTER).first)
+
+    async def train_marine(self):
+        for barracks in self.units(BARRACKS).ready.noqueue:
+            if self.can_afford(MARINE) and self.supply_left > 0:
+                await self.do(barracks.train(MARINE))
+
+    async def scout(self):
+        scout = self.units(SCV).idle.random_or(None)
+        if scout and not self.known_enemy_units:
+            target = self.enemy_start_locations[0]
+            await self.do(scout.move(target))
+
+    async def attack(self):
+        if self.units(MARINE).amount > 10:
+            for marine in self.units(MARINE).idle:
+                target = self.enemy_start_locations[0]
+                await self.do(marine.attack(target))
+
+
+This adds the following functionality:
+
+Building Barracks: A simple check to build a Barracks if none exist.
+Training Marines: Train Marines in the existing Barracks if there's enough supply.
+Scouting: Send an idle SCV to the enemy's starting location if the bot hasn't discovered any enemy units.
+Attacking: When there are more than 10 Marines, send them to attack the enemy's starting location.
+
+This is still a basic example and lacks advanced strategies, but it demonstrates how to add scouting and attacking functionality to your bot.
+--------------------------
+Add select target efficiently function
+--------------------------
+To efficiently select attack targets for your units, you can create a function that chooses the target based on certain priorities, such as enemy unit types, distances, or other factors. In this example, we'll create a function that selects the closest target to a given unit.
+
+Modify the SimpleBot class by adding the select_target function:
+
+python
+Copy code
+class SimpleBot(sc2.BotAI):
+    async def on_step(self, iteration):
+        # ... (previous code)
+
+    async def select_target(self, unit):
+        targets = self.known_enemy_units
+        if targets.exists:
+            return targets.closest_to(unit)
+        else:
+            return self.enemy_start_locations[0]
+
+    async def scout(self):
+        scout = self.units(SCV).idle.random_or(None)
+        if scout and not self.known_enemy_units:
+            target = self.select_target(scout)
+            await self.do(scout.move(target))
+
+    async def attack(self):
+        if self.units(MARINE).amount > 10:
+            for marine in self.units(MARINE).idle:
+                target = self.select_target(marine)
+                await self.do(marine.attack(target))
+
+
+The select_target function finds the closest target among the known enemy units. If no enemy units are known, it defaults to the enemy's starting location. This function is used in both the scout and attack methods to determine where the units should move or attack.
+
+You can further improve the target selection by considering factors like enemy unit types, their health, and their threat level. This would require more complex decision-making logic and potentially some machine learning techniques to optimize the bot's performance.
+--------------------------
+Add exploring function please
+--------------------------
+To add an exploring function to the SimpleBot, you can create a function that sends idle units to explore unexplored areas of the map. In this example, we'll create a function called explore that sends idle SCVs to explore random locations.
+
+Modify the SimpleBot class by adding the explore function:
+
+python
+Copy code
+import random
+
+class SimpleBot(sc2.BotAI):
+    async def on_step(self, iteration):
+        await self.distribute_workers()  # Automatically distribute worker mining
+        await self.train_scv()
+        await self.build_supply_depot()
+        await self.build_barracks()
+        await self.train_marine()
+        await self.scout()
+        await self.attack()
+        await self.explore()
+
+    # ... (previous code)
+
+    async def explore(self):
+        if self.units(SCV).idle.exists and not self.known_enemy_units:
+            for scv in self.units(SCV).idle:
+                target = self.random_location_variance(scv.position, max_distance=25)
+                await self.do(scv.move(target))
+
+    def random_location_variance(self, position, max_distance=10):
+        x_offset = random.randint(-max_distance, max_distance)
+        y_offset = random.randint(-max_distance, max_distance)
+        new_position = position.offset((x_offset, y_offset))
+        return new_position.clamp(0, self.game_info.map_size.width, 0, self.game_info.map_size.height)
+
+
+The explore function checks for idle SCVs and sends them to move to random locations around their current position. The random_location_variance function is a helper function that generates a new position within a specified maximum distance from a given position.
+
+This basic exploring function can be improved by taking into account the map's terrain and expansion locations, and by using a more intelligent exploration strategy that covers the map more efficiently. Additionally, you might want to limit the number of SCVs exploring to avoid negatively impacting your economy.
+--------------------------
+3 / 3
+Merge them into pysc2 to create an advanced AI that use LSTM, ReLU, HDQN please
+--------------------------
+Merging the simple bot example into a more advanced AI using PySC2 and deep learning techniques like LSTM, ReLU, and HDQN is a complex and lengthy task. It is beyond the scope of a single response to provide the complete code. However, I can provide a high-level overview of the process and some guidance on how to get started.
+
+Install PySC2 and Tensorflow:
+Copy code
+pip install pysc2 tensorflow
+
+
+Implement feature extraction: Convert game state and observations into a suitable format for your neural network. This includes unit types, positions, health, and other relevant information.
+
+Create a neural network architecture: Design a neural network using LSTM (Long Short-Term Memory) for handling time series data and ReLU (Rectified Linear Unit) activation functions. The HDQN (Heterogeneous Deep Q-Network) can be used for learning multiple tasks and sharing knowledge between them.
+
+Train the neural network: Collect a dataset of game replays or use reinforcement learning techniques like Q-learning or policy gradients to train your AI. You can use TensorFlow or another deep learning library like PyTorch to implement and train your model.
+
+Implement the PySC2 agent: Create a custom agent class that inherits from the PySC2 agent class and uses your trained neural network to make decisions.
+
+Integrate your agent into the StarCraft II environment: Use the PySC2 library to run your agent in the game and test its performance.
+
+Here is a basic template for creating a PySC2 agent:
+
+python
+Copy code
+import numpy as np
+from pysc2.agents import base_agent
+from pysc2.lib import actions
+from pysc2.lib import features
+
+class AdvancedAI(base_agent.BaseAgent):
+    def __init__(self):
+        super().__init__()
+
+    def step(self, obs):
+        super().step(obs)
+        # Perform feature extraction from the observation
+        state_features = self.extract_features(obs)
+
+        # Use your trained neural network to predict the action
+        action = self.predict_action(state_features)
+
+        # Execute the action in the game environment
+        return actions.FunctionCall(action, [])
+
+    def extract_features(self, obs):
+        # Implement feature extraction from the observation
+        pass
+
+    def predict_action(self, state_features):
+        # Use your trained neural network to predict the action based on state_features
+        pass
+
+
+This template provides a starting point for implementing an advanced AI using PySC2. You will need to fill in the feature extraction, neural network prediction, and action execution parts with your own implementation.
+
+I highly recommend checking out the following resources to learn more about creating advanced StarCraft II AIs using deep learning techniques:
+
+DeepMind's StarCraft II Learning Environment (SC2LE) paper
+DeepMind's PySC2 repository
+OpenAI's Five - A successful Dota 2 AI project that can provide inspiration and guidance for creating advanced AIs in complex strategy games.
+--------------------------
+More codes please
+--------------------------
+Creating a complete advanced StarCraft II AI using deep learning techniques like LSTM, ReLU, and HDQN is a complex task that requires a significant amount of code and time. However, I can provide you with a more detailed template that you can use as a starting point for your project.
+
+First, create a file called advanced_ai.py and add the following code. This will serve as the main entry point for running the PySC2 agent.
+python
+Copy code
+import sys
+from absl import app
+from pysc2 import run_configs
+from pysc2.env import sc2_env
+from pysc2.lib import maps
+from advanced_agent import AdvancedAgent
+
+def main(_):
+    map_name = "Simple64"
+    players = [sc2_env.Agent(sc2_env.Race.terran), sc2_env.Bot(sc2_env.Race.random, sc2_env.Difficulty.very_easy)]
+
+    with sc2_env.SC2Env(map_name=map_name, players=players) as env:
+        agent = AdvancedAgent()
+
+        for episode in range(10):
+            timesteps = env.reset()
+            agent.reset()
+
+            while True:
+                actions = [agent.step(timesteps[0])]
+                timesteps = env.step(actions)
+                if timesteps[0].last():
+                    break
+
+if __name__ == "__main__":
+    app.run(main)
+
+Next, create another file called advanced_agent.py. This file will contain the AdvancedAgent class, which inherits from base_agent.BaseAgent. Add the following code to this file:
+python
+Copy code
+import numpy as np
+from pysc2.agents import base_agent
+from pysc2.lib import actions
+
+class AdvancedAgent(base_agent.BaseAgent):
+    def __init__(self):
+        super().__init__()
+
+    def step(self, obs):
+        super().step(obs)
+        # Perform feature extraction from the observation
+        state_features = self.extract_features(obs)
+
+        # Use your trained neural network to predict the action
+        action = self.predict_action(state_features)
+
+        # Execute the action in the game environment
+        return actions.FunctionCall(action, [])
+
+    def extract_features(self, obs):
+        # Implement feature extraction from the observation
+        # This function should return a NumPy array or a tensor that can be used as input for your neural network
+        pass
+
+    def predict_action(self, state_features):
+        # Use your trained neural network to predict the action based on state_features
+        # This function should return the action to be executed by the agent
+        pass
+
+
+Now you need to create your neural network using a deep learning library like TensorFlow or PyTorch. This will involve designing the architecture, training the network, and saving the model. You can use LSTM for handling time series data, ReLU activation functions, and HDQN for learning multiple tasks.
+
+Once your neural network is trained and saved, you can load the model in the AdvancedAgent class and use it to make predictions. Implement the extract_features and predict_action methods in the AdvancedAgent class to use your neural network.
+
+Note that the above code serves as a template and starting point for implementing an advanced StarCraft II AI using PySC2 and deep learning techniques. You'll need to fill in the details for feature extraction, neural network prediction, and action execution with your own implementation.
+
+Creating an advanced StarCraft II AI requires extensive knowledge of the game, AI techniques, and deep learning frameworks. It may take considerable time and effort to build a successful and competitive AI.
+--------------------------
+Multiple agent training codes please
+--------------------------
+Creating a multi-agent training environment for StarCraft II using PySC2 involves setting up multiple instances of your custom agent and using a reinforcement learning technique, such as Proximal Policy Optimization (PPO), to train the agents. I'll provide a high-level overview of the process and a template for setting up the training loop.
+
+Install the necessary libraries:
+bash
+Copy code
+pip install pysc2 tensorflow-gpu
+
+Create a file called train_multi_agent.py with the following code. This sets up the training environment with multiple instances of your custom agent and the training loop:
+python
+Copy code
+import numpy as np
+import tensorflow as tf
+from pysc2 import run_configs
+from pysc2.env import sc2_env
+from pysc2.lib import maps
+from advanced_agent import AdvancedAgent
+
+# Set training parameters
+num_agents = 4
+num_episodes = 1000
+map_name = "Simple64"
+players = [sc2_env.Agent(sc2_env.Race.terran) for _ in range(num_agents)]
+
+# Create and initialize agents
+agents = [AdvancedAgent() for _ in range(num_agents)]
+
+# Create the environment
+with sc2_env.SC2Env(map_name=map_name, players=players) as env:
+    # Training loop
+    for episode in range(num_episodes):
+        timesteps = env.reset()
+
+        for agent in agents:
+            agent.reset()
+
+        episode_rewards = np.zeros(num_agents)
+        done = False
+
+        while not done:
+            actions = [agent.step(timestep) for agent, timestep in zip(agents, timesteps)]
+
+            # Collect agent actions and perform an environment step
+            timesteps = env.step(actions)
+
+            # Calculate rewards and check if the episode is done
+            rewards = [timestep.reward for timestep in timesteps]
+            episode_rewards += rewards
+            done = any([timestep.last() for timestep in timesteps])
+
+        # Update agent policies using the collected rewards and observations
+        # This step depends on the reinforcement learning algorithm you are using (e.g., PPO, A3C)
+        # train_agents(agents, episode_rewards, ...)
+
+    # Save the trained agents
+    # save_agents(agents)
+
+
+This code initializes multiple instances of your custom AdvancedAgent and sets up a training loop. The agents interact with the environment, and the collected rewards and observations can be used to update the agents' policies using a reinforcement learning algorithm like PPO.
+
+You will need to implement the reinforcement learning algorithm, such as PPO, for training the agents. This involves creating a neural network architecture, defining the loss functions, and updating the network weights based on the collected rewards and observations.
+
+Update the AdvancedAgent class in the advanced_agent.py file to use the trained neural network for making predictions during the training process.
+
+Note that this code serves as a high-level template for training multiple agents in the StarCraft II environment using PySC2. You'll need to implement the reinforcement learning algorithm and integrate it into the provided training loop. Creating a multi-agent training environment and implementing reinforcement learning algorithms require significant knowledge of AI and deep learning techniques.
+--------------------------
+How about replace tensorflow to pytorch
+--------------------------
+To replace TensorFlow with PyTorch in your multi-agent StarCraft II training setup, you will need to adjust your training loop, neural network architecture, and policy update method to use PyTorch instead. Here's a high-level overview of the necessary adjustments:
+
+Install the necessary libraries:
+bash
+Copy code
+pip install pysc2 torch
+
+Adjust the train_multi_agent.py file to use PyTorch. You will need to modify the training loop and update the agent policies using a PyTorch-compatible reinforcement learning algorithm like PPO:
+python
+Copy code
+import numpy as np
+import torch
+from pysc2 import run_configs
+from pysc2.env import sc2_env
+from pysc2.lib import maps
+from advanced_agent import AdvancedAgent
+
+# Set training parameters
+num_agents = 4
+num_episodes = 1000
+map_name = "Simple64"
+players = [sc2_env.Agent(sc2_env.Race.terran) for _ in range(num_agents)]
+
+# Create and initialize agents
+agents = [AdvancedAgent() for _ in range(num_agents)]
+
+# Create the environment
+with sc2_env.SC2Env(map_name=map_name, players=players) as env:
+    # Training loop
+    for episode in range(num_episodes):
+        timesteps = env.reset()
+
+        for agent in agents:
+            agent.reset()
+
+        episode_rewards = np.zeros(num_agents)
+        done = False
+
+        while not done:
+            actions = [agent.step(timestep) for agent, timestep in zip(agents, timesteps)]
+
+            # Collect agent actions and perform an environment step
+            timesteps = env.step(actions)
+
+            # Calculate rewards and check if the episode is done
+            rewards = [timestep.reward for timestep in timesteps]
+            episode_rewards += rewards
+            done = any([timestep.last() for timestep in timesteps])
+
+        # Update agent policies using the collected rewards and observations
+        # This step depends on the reinforcement learning algorithm you are using (e.g., PPO, A3C)
+        # train_agents(agents, episode_rewards, ...)
+
+    # Save the trained agents
+    # save_agents(agents)
+
+
+Update your AdvancedAgent class and reinforcement learning algorithm implementation to use PyTorch instead of TensorFlow. This will involve creating a PyTorch neural network model, defining loss functions, and updating the network weights based on the collected rewards and observations.
+
+In the advanced_agent.py file, update the AdvancedAgent class to use the PyTorch-trained neural network for making predictions during the training process.
+
+Keep in mind that this code serves as a high-level template for training multiple agents in the StarCraft II environment using PySC2 and PyTorch. You will need to implement the reinforcement learning algorithm and integrate it into the provided training loop. Creating a multi-agent training environment and implementing reinforcement learning algorithms require significant knowledge of AI and deep learning techniques.
+--------------------------
+Add anti-stealth 
+--------------------------
+To add anti-stealth capabilities to your StarCraft II bot, you will need to detect and counter stealth units such as Dark Templars and Banshees. To do this, you can use detectors like Missile Turrets, Sensor Towers, and Ravens for the Terran race. In this example, I will demonstrate how to add a simple anti-stealth strategy for the Terran race by building Missile Turrets and training Ravens.
+
+First, modify your AdvancedAgent class in the advanced_agent.py file to include the following methods for building Missile Turrets and training Ravens:
+
+python
+Copy code
+from pysc2.lib import units, actions, features
+
+# ...
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def build_missile_turret(self, obs):
+        if self.units(units.Terran.EngineeringBay).ready.exists:
+            scvs = self.units(units.Terran.SCV).ready
+            if scvs.exists:
+                scv = scvs.random
+                target = self.find_placement(units.Terran.MissileTurret, scv.position, placement_radius=8)
+                if target is not None:
+                    await self.do(scv.build(units.Terran.MissileTurret, target))
+
+    async def build_engineering_bay(self, obs):
+        if (
+            self.units(units.Terran.CommandCenter).ready.exists
+            and not self.units(units.Terran.EngineeringBay).exists
+        ):
+            scvs = self.units(units.Terran.SCV).ready
+            if scvs.exists:
+                scv = scvs.random
+                target = self.find_placement(units.Terran.EngineeringBay, scv.position, placement_radius=8)
+                if target is not None:
+                    await self.do(scv.build(units.Terran.EngineeringBay, target))
+
+    async def train_raven(self, obs):
+        for starport in self.units(units.Terran.Starport).ready.noqueue:
+            if self.can_afford(units.Terran.Raven):
+                await self.do(starport.train(units.Terran.Raven))
+
+
+Next, add calls to the new methods inside the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.build_engineering_bay(obs)
+        await self.build_missile_turret(obs)
+        await self.train_raven(obs)
+        # ...
+
+
+This implementation will construct an Engineering Bay, build Missile Turrets, and train Ravens to provide detection capabilities against stealth units. The bot will build Missile Turrets around the base and train Ravens that can move around the map to detect cloaked or burrowed enemy units.
+
+You can further improve this anti-stealth strategy by adjusting the placement of Missile Turrets, the number of Ravens, and how they are controlled. Also, consider other detection options like Sensor Towers to improve your bot's map awareness.
+
+Please note that this example is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Nice, upgrage the on_step structure then.
+--------------------------
+To upgrade the on_step structure in the AdvancedAgent class, you can refactor the code to make it more modular and easier to maintain. I will demonstrate how to create separate methods for each action and use a decision-making function to determine which action to perform.
+
+First, create separate methods for each action in your advanced_agent.py file:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_workers(self, obs):
+        # Add your worker management logic here
+
+    async def manage_supply(self, obs):
+        # Add your supply management logic here
+
+    async def manage_army(self, obs):
+        # Add your army management logic here
+
+    async def manage_technology(self, obs):
+        # Add your technology management logic here
+
+    async def manage_economy(self, obs):
+        # Add your economy management logic here
+
+    async def scout_and_attack(self, obs):
+        # Add your scouting and attacking logic here
+
+
+Next, create a decision-making function that determines which action to perform:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    def decide_action(self, obs):
+        # Implement your decision-making logic here
+        # You can use the observation data to make decisions based on the current game state
+
+        # Example: prioritize actions based on a predefined order
+        actions = [
+            self.manage_workers,
+            self.manage_supply,
+            self.manage_army,
+            self.manage_technology,
+            self.manage_economy,
+            self.scout_and_attack,
+        ]
+
+        return actions
+
+
+Finally, update the on_step method to use the decision-making function and execute the chosen action:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        actions = self.decide_action(self.obs)
+        
+        for action in actions:
+            await action(self.obs)
+
+
+This upgraded on_step structure allows you to organize your agent's actions into separate methods and use a decision-making function to determine which action to perform. This makes the code more modular and easier to maintain. You can further improve the decision-making function by implementing more sophisticated logic based on the current game state, such as taking into account the type of opponent or adapting to the opponent's strategy.
+
+Please note that this example is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Well, merge them please
+--------------------------
+3 / 3
+
+Here's the AdvancedAgent class with the upgraded on_step structure and the anti-stealth strategy integrated:
+
+python
+Copy code
+from pysc2.agents import base_agent
+from pysc2.lib import units, actions, features
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_workers(self, obs):
+        # Add your worker management logic here
+
+    async def manage_supply(self, obs):
+        # Add your supply management logic here
+
+    async def manage_army(self, obs):
+        # Add your army management logic here
+
+    async def manage_technology(self, obs):
+        # Add your technology management logic here
+
+    async def manage_economy(self, obs):
+        # Add your economy management logic here
+
+    async def scout_and_attack(self, obs):
+        # Add your scouting and attacking logic here
+
+    async def build_missile_turret(self, obs):
+        if self.units(units.Terran.EngineeringBay).ready.exists:
+            scvs = self.units(units.Terran.SCV).ready
+            if scvs.exists:
+                scv = scvs.random
+                target = self.find_placement(units.Terran.MissileTurret, scv.position, placement_radius=8)
+                if target is not None:
+                    await self.do(scv.build(units.Terran.MissileTurret, target))
+
+    async def build_engineering_bay(self, obs):
+        if (
+            self.units(units.Terran.CommandCenter).ready.exists
+            and not self.units(units.Terran.EngineeringBay).exists
+        ):
+            scvs = self.units(units.Terran.SCV).ready
+            if scvs.exists:
+                scv = scvs.random
+                target = self.find_placement(units.Terran.EngineeringBay, scv.position, placement_radius=8)
+                if target is not None:
+                    await self.do(scv.build(units.Terran.EngineeringBay, target))
+
+    async def train_raven(self, obs):
+        for starport in self.units(units.Terran.Starport).ready.noqueue:
+            if self.can_afford(units.Terran.Raven):
+                await self.do(starport.train(units.Terran.Raven))
+
+    def decide_action(self, obs):
+        actions = [
+            self.manage_workers,
+            self.manage_supply,
+            self.manage_army,
+            self.manage_technology,
+            self.manage_economy,
+            self.scout_and_attack,
+            self.build_engineering_bay,
+            self.build_missile_turret,
+            self.train_raven,
+        ]
+
+        return actions
+
+    async def on_step(self, iteration):
+        actions = self.decide_action(self.obs)
+        
+        for action in actions:
+            await action(self.obs)
+
+
+In this updated AdvancedAgent class, the on_step method has been restructured to separate the different actions into individual methods, and the anti-stealth strategy has been added by building Missile Turrets and training Ravens.
+
+Please note that this example is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
