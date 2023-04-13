@@ -657,3 +657,309 @@ class AdvancedAgent(base_agent.BaseAgent):
 In this updated AdvancedAgent class, the on_step method has been restructured to separate the different actions into individual methods, and the anti-stealth strategy has been added by building Missile Turrets and training Ravens.
 
 Please note that this example is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+2 / 2
+Add manage_workers action that has maximum limited in each command center
+--------------------------
+To create a manage_workers action that maintains a maximum worker limit per Command Center, you can follow these steps:
+
+Add a constant for the maximum number of workers per Command Center at the beginning of your AdvancedAgent class:
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    MAX_WORKERS_PER_CC = 16
+    # ...
+
+Implement the manage_workers method in the AdvancedAgent class to train workers while respecting the worker limit:
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_workers(self, obs):
+        command_centers = self.units(units.Terran.CommandCenter).ready
+        scvs = self.units(units.Terran.SCV)
+
+        for cc in command_centers:
+            cc_scvs = scvs.closer_than(15, cc)
+            if len(cc_scvs) < self.MAX_WORKERS_PER_CC and cc.noqueue and self.can_afford(units.Terran.SCV):
+                await self.do(cc.train(units.Terran.SCV))
+
+
+This manage_workers method iterates through each ready Command Center and checks the number of SCVs nearby. If there are fewer SCVs than the maximum worker limit, the method trains additional workers.
+
+Please note that this implementation assumes you already have methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The example provided is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add manage_workers action
+--------------------------
+To add a manage_workers action in your AdvancedAgent class, you can implement a method that trains workers and ensures a balanced distribution of workers for gathering resources. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_workers(self, obs):
+        scvs = self.units(units.Terran.SCV)
+        command_centers = self.units(units.Terran.CommandCenter).ready
+
+        if command_centers.exists:
+            cc = command_centers.first
+
+            # Train more workers if there are less than 16 SCVs
+            if scvs.amount < 16 and cc.noqueue and self.can_afford(units.Terran.SCV):
+                await self.do(cc.train(units.Terran.SCV))
+
+            # Assign idle workers to gather resources
+            idle_scvs = scvs.idle
+            if idle_scvs.exists:
+                scv = idle_scvs.random
+
+                # Gather minerals
+                minerals = self.state.mineral_field.closest_to(scv)
+                if minerals:
+                    await self.do(scv.gather(minerals))
+
+                # Gather vespene gas
+                refineries = self.units(units.Terran.Refinery).ready
+                if refineries.exists:
+                    refinery = refineries.closest_to(scv)
+                    if refinery:
+                        await self.do(scv.gather(refinery))
+
+
+In this example, the manage_workers method trains more SCVs if there are less than 16 of them, and it assigns idle SCVs to gather resources such as minerals and vespene gas.
+
+Now, include the manage_workers action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.manage_workers(self.obs)
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add manage_supply gradually.
+--------------------------
+To implement a manage_supply action that gradually increases supply in your AdvancedAgent class, you can create a method that builds Supply Depots based on the current supply usage. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_supply(self, obs):
+        supply_limit = obs.observation.player.food_cap
+        current_supply = obs.observation.player.food_used
+        supply_ratio = current_supply / supply_limit
+
+        if supply_ratio > 0.8 and self.can_afford(units.Terran.SupplyDepot):
+            scvs = self.units(units.Terran.SCV).ready
+            if scvs.exists:
+                scv = scvs.random
+                target = self.find_placement(units.Terran.SupplyDepot, scv.position, placement_radius=8)
+                if target is not None:
+                    await self.do(scv.build(units.Terran.SupplyDepot, target))
+
+
+In this example, the manage_supply method calculates the supply usage ratio and builds a Supply Depot when the ratio is greater than 0.8 (80% supply usage). This approach allows for a gradual increase in supply based on the current demand.
+
+Now, include the manage_supply action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.manage_supply(self.obs)
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add manage_army function
+--------------------------
+To add a manage_army function in your AdvancedAgent class, you can implement a method that trains combat units, such as Marines, and sets a rally point for them. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_army(self, obs):
+        barracks = self.units(units.Terran.Barracks).ready
+        if barracks.exists:
+            barrack = barracks.first
+
+            # Train Marines if there are less than 20 Marines
+            marines = self.units(units.Terran.Marine)
+            if marines.amount < 20 and barrack.noqueue and self.can_afford(units.Terran.Marine):
+                await self.do(barrack.train(units.Terran.Marine))
+
+            # Set rally point for Marines
+            rally_point = self.state.mineral_field.closest_to(barrack)
+            if rally_point:
+                await self.do(barrack.rally_units(rally_point))
+
+
+In this example, the manage_army method trains Marines if there are less than 20 of them and sets a rally point for them at the closest mineral field.
+
+Now, include the manage_army action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.manage_army(self.obs)
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add manage_army function that can manage all kind of units
+--------------------------
+To create a manage_army function that can manage different types of units, you can implement a method that trains various combat units and assigns them specific roles or targets. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_army(self, obs):
+        # Train Marines
+        await self.train_units(units.Terran.Barracks, units.Terran.Marine, 20)
+
+        # Train Siege Tanks
+        await self.train_units(units.Terran.Factory, units.Terran.SiegeTank, 5)
+
+        # Train Medivacs
+        await self.train_units(units.Terran.Starport, units.Terran.Medivac, 3)
+
+    async def train_units(self, production_building_unit, unit_to_train, max_units):
+        production_buildings = self.units(production_building_unit).ready
+        if production_buildings.exists:
+            building = production_buildings.first
+            unit_count = self.units(unit_to_train).amount
+
+            if unit_count < max_units and building.noqueue and self.can_afford(unit_to_train):
+                await self.do(building.train(unit_to_train))
+
+
+In this example, the manage_army method trains Marines, Siege Tanks, and Medivacs. The training is performed by the train_units function, which accepts parameters for the production building type, the unit type to train, and the maximum number of units to train.
+
+Now, include the manage_army action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.manage_army(self.obs)
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add manage_army function that can manage military from Terran
+--------------------------
+To create a manage_army function that can manage the military units of the Terran race, you can implement a method that trains a variety of combat units and sets a rally point for them. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_army(self, obs):
+        # Train Marines
+        await self.train_units(units.Terran.Barracks, units.Terran.Marine, 20)
+
+        # Train Marauders
+        await self.train_units(units.Terran.Barracks, units.Terran.Marauder, 10)
+
+        # Train Siege Tanks
+        await self.train_units(units.Terran.Factory, units.Terran.SiegeTank, 5)
+
+        # Train Medivacs
+        await self.train_units(units.Terran.Starport, units.Terran.Medivac, 3)
+
+        # Train Vikings
+        await self.train_units(units.Terran.Starport, units.Terran.Viking, 4)
+
+        # Train Battlecruisers
+        await self.train_units(units.Terran.Starport, units.Terran.Battlecruiser, 2)
+
+    async def train_units(self, production_building_unit, unit_to_train, max_units):
+        production_buildings = self.units(production_building_unit).ready
+        if production_buildings.exists:
+            building = production_buildings.first
+            unit_count = self.units(unit_to_train).amount
+
+            if unit_count < max_units and building.noqueue and self.can_afford(unit_to_train):
+                await self.do(building.train(unit_to_train))
+
+
+In this example, the manage_army method trains various Terran units like Marines, Marauders, Siege Tanks, Medivacs, Vikings, and Battlecruisers. The training is performed by the train_units function, which accepts parameters for the production building type, the unit type to train, and the maximum number of units to train.
+
+Now, include the manage_army action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.manage_army(self.obs)
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add iteration to loop actions randomly
+--------------------------
+To create an on_step function that iterates over a list of actions and performs them randomly, you can use the random module to shuffle the actions before executing them. Here's an example of how to implement this:
+
+python
+Copy code
+import random
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def on_step(self, iteration):
+        # List of actions
+        actions_list = [
+            self.manage_workers,
+            self.manage_supply,
+            self.manage_army,
+            self.build_structures,
+            self.attack
+        ]
+
+        # Shuffle the actions list
+        random.shuffle(actions_list)
+
+        # Execute the actions in the shuffled order
+        for action in actions_list:
+            await action(self.obs)
+    
+    # ...
+
+
+In this example, the on_step method creates a list of available actions and shuffles it using random.shuffle. It then iterates over the shuffled list and executes each action. You can add any action methods you have implemented in your AdvancedAgent class to the actions_list.
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
