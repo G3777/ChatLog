@@ -1165,3 +1165,69 @@ class AdvancedAgent(base_agent.BaseAgent):
 
 
 In this example, the manage_economy method focuses on building additional Command Centers, training workers, and gathering resources with SCVs. The
+--------------------------
+3 / 3
+Add expand_base function
+--------------------------
+To add an expand_base function in your AdvancedAgent class, you can implement a method that checks if it is possible to build a new base and expands your territory. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, features, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def expand_base(self):
+        # Build additional Command Centers
+        if self.can_afford(units.Terran.CommandCenter) and len(self.units(units.Terran.CommandCenter)) < 3:
+            await self.expand_now()
+
+    async def expand_now(self):
+        # Select SCV and location to build Command Center
+        scv = self.workers.random
+        location = await self.get_next_expansion()
+        await self.do(scv.build(units.Terran.CommandCenter, location))
+
+    async def get_next_expansion(self):
+        # Get the next expansion location
+        expansion_locations = self.expansion_locations
+        if not expansion_locations:
+            return None
+        cc = self.units(units.Terran.CommandCenter)
+        if cc.exists:
+            current_expansions = [cc.closest_to(expansion) for expansion in expansion_locations]
+            return await self.get_best_location(expansion_locations, current_expansions)
+        return await self.get_best_location(expansion_locations)
+
+    async def get_best_location(self, locations, avoid=None):
+        # Get the best location to build
+        if avoid is None:
+            avoid = []
+        distances = await self._client.query_pathing(self.units.structure.position, locations)
+        if not distances:
+            return None
+        distances = np.array(distances)
+        if avoid:
+            avoid = np.array([a.position for a in avoid])
+            distances += np.any(np.isclose(avoid[None, :, :], locations[:, None, :], atol=2.0), axis=2) * 1000.0
+        best_loc = np.argmax(distances)
+        return locations[best_loc]
+
+
+In this example, the expand_base method checks if the player has enough resources to build an additional Command Center and if the player has fewer than three Command Centers. If both conditions are met, the expand_now method is called to select an SCV and a location to build a new Command Center.
+
+The expand_now method selects a random SCV and uses the get_next_expansion method to select a suitable location for the new Command Center. The get_best_location method is used to select the best location, taking into account the current locations of the player's units to avoid overlapping.
+
+Now, include the expand_base action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.expand_base()
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
