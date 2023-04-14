@@ -963,3 +963,205 @@ class AdvancedAgent(base_agent.BaseAgent):
 In this example, the on_step method creates a list of available actions and shuffles it using random.shuffle. It then iterates over the shuffled list and executes each action. You can add any action methods you have implemented in your AdvancedAgent class to the actions_list.
 
 Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+What is butterfly in graphical views
+--------------------------
+In graphical views, the term "butterfly" often refers to a visual representation of a plot or a shape that resembles a butterfly's wings. This can occur in various types of visualizations, such as scatter plots, line plots, or even frequency distributions, where the data points or lines form a symmetrical pattern similar to a butterfly.
+
+One common example is the "butterfly plot" used in some scientific fields, such as meteorology and climate science. These plots visualize differences between two datasets or models by plotting them on the same axes, often using mirror-like symmetry. The resulting plot resembles the shape of a butterfly, with one "wing" representing the data from one dataset or model and the other "wing" representing the data from the other dataset or model.
+
+Another example is in signal processing or audio analysis, where a "butterfly" shape can appear in a frequency-domain plot, representing symmetrical amplitude or power distribution across frequencies.
+
+It's essential to understand that the term "butterfly" in graphical views is not a specific type of plot or visualization but rather a description of the resulting shape formed by the data points or lines in the plot.
+--------------------------
+What is calls&called by in graphical views?
+--------------------------
+The previous model used in this conversation is unavailable. We've switched you to the latest default model
+
+In graphical views, "calls" and "called by" refer to the relationship between functions or methods in a program or software. This relationship is often visualized in the form of a call graph, which shows how functions or methods call each other during program execution.
+
+"Called by" refers to the functions or methods that call a particular function or method. In other words, it shows the incoming calls to a function or method.
+
+"Calls" refers to the functions or methods that a particular function or method calls during its execution. In other words, it shows the outgoing calls from a function or method.
+
+In a call graph visualization, nodes represent functions or methods, and edges represent the calls between them. The "called by" relationship is represented by edges pointing towards a node, while the "calls" relationship is represented by edges pointing away from a node.
+
+Understanding the relationships between functions or methods in a program can be helpful in identifying bottlenecks, optimizing code, and debugging errors. By visualizing the call graph, developers can see the flow of program execution and identify potential performance issues or areas for improvement.
+--------------------------
+2 / 2
+Graphical views options in scitools' Understand
+--------------------------
+Scitools' Understand is a software tool that provides a graphical user interface (GUI) to visualize code and software systems. Here are some of the graphical views options available in Scitools' Understand:
+
+Graph View: This view displays a graph of the software system's components and their relationships. The graph can be customized to show different types of relationships, such as function calls or inheritance.
+
+Call Tree View: This view displays a hierarchical view of the function calls in the code. It shows the calling relationship between functions, with the main function at the top.
+
+Class Tree View: This view displays a hierarchical view of the classes in the code. It shows the inheritance relationships between classes, with the base class at the top.
+
+Metrics View: This view displays a list of metrics for the code, such as cyclomatic complexity and code coverage. The metrics can be sorted and filtered to identify areas for improvement.
+
+Dependency Structure Matrix (DSM) View: This view displays a matrix of the dependencies between the components in the code. It can be used to identify circular dependencies and other issues in the code.
+
+Control Flow View: This view displays a diagram of the control flow in the code. It shows the paths of execution through the code and can be used to identify potential errors or bottlenecks.
+
+Call Graph View: This view displays a graph of the function calls in the code. It can be used to identify the relationships between functions and to optimize the code.
+
+Overall, the graphical views in Scitools' Understand provide developers with a powerful set of tools for analyzing and visualizing code and software systems. They can help identify potential issues, optimize code, and improve overall software quality.
+--------------------------
+What is declaratation in graphical views
+--------------------------
+In graphical views, "declaration" refers to the location in code where a variable, function, or other program element is declared or defined. The declaration typically includes information such as the name, type, and scope of the program element.
+
+Declarations are often represented in graphical views as nodes in a graph or as entries in a table or list. They can be used to navigate the codebase, identify dependencies between program elements, and understand the structure of the code.
+
+For example, in a call graph visualization, a function's declaration might be represented as a node in the graph. The edges connecting the node to other nodes in the graph would represent the function's calls to other functions.
+
+Similarly, in a metrics view, the declarations of variables or functions might be listed along with other information such as their size or complexity. This can help developers identify areas of the code that may need to be refactored or optimized.
+
+Overall, declarations play an important role in understanding and analyzing code, and graphical views can be a powerful tool for visualizing and exploring declarations and their relationships to other program elements.
+--------------------------
+2 / 2
+Add manage_technology function
+--------------------------
+To add a manage_technology function in your AdvancedAgent class, you can implement a method that researches or upgrades technology for your units and structures. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_technology(self, obs):
+        # Research Stimpacks for Marines
+        await self.research_tech(units.Terran.BarracksTechLab, upgrades.TerranStimpack, units.Terran.Marine)
+
+        # Upgrade Infantry Weapons Level 1
+        await self.upgrade_tech(units.Terran.EngineeringBay, upgrades.TerranInfantryWeaponsLevel1)
+
+        # Upgrade Building Armor
+        await self.upgrade_tech(units.Terran.EngineeringBay, upgrades.TerranBuildingArmor)
+
+    async def research_tech(self, tech_building_unit, tech_to_research, unit_to_upgrade):
+        tech_buildings = self.units(tech_building_unit).ready
+        if tech_buildings.exists:
+            tech_building = tech_buildings.first
+            if self.can_afford(tech_to_research) and not self.already_pending(tech_to_research):
+                await self.do(tech_building(tech_to_research))
+                
+            # Upgrade the unit
+            for unit in self.units(unit_to_upgrade).ready.noqueue:
+                abilities = await self.get_available_abilities(unit)
+                if tech_to_research in abilities:
+                    await self.do(unit(tech_to_research))
+
+    async def upgrade_tech(self, upgrade_building_unit, tech_to_upgrade):
+        upgrade_buildings = self.units(upgrade_building_unit).ready
+        if upgrade_buildings.exists:
+            upgrade_building = upgrade_buildings.first
+            if self.can_afford(tech_to_upgrade) and not self.already_pending(tech_to_upgrade):
+                await self.do(upgrade_building.research(tech_to_upgrade))
+
+
+In this example, the manage_technology method researches Stimpacks for Marines, upgrades Infantry Weapons Level 1 for all infantry units, and upgrades Building Armor for all structures. The research/upgrades are performed by the research_tech and upgrade_tech functions, which accept parameters for the technology building/unit, the technology to research/upgrade, and the unit type to upgrade.
+
+Now, include the manage_technology action in the on_step method of your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    async def on_step(self, iteration):
+        # ...
+        await self.manage_technology(self.obs)
+        # ...
+
+
+Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Add manage_economy function
+--------------------------
+To add a manage_economy function in your AdvancedAgent class, you can implement a method that focuses on gathering resources and expanding your economy. Here's an example of how to implement this method:
+
+python
+Copy code
+from pysc2.lib import actions, features, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    # ...
+
+    async def manage_economy(self, obs):
+        # Build additional Command Centers
+        await self.expand_base()
+
+        # Train SCVs
+        await self.train_units(units.Terran.CommandCenter, units.Terran.SCV, 60)
+
+        # Gather resources with SCVs
+        await self.gather_resources()
+
+    async def expand_base(self):
+        # Build additional Command Centers
+        if self.can_afford(units.Terran.CommandCenter) and len(self.units(units.Terran.CommandCenter)) < 3:
+            await self.expand_now()
+
+    async def train_units(self, production_building_unit, unit_to_train, max_units):
+        # Train workers
+        production_buildings = self.units(production_building_unit).ready
+        if production_buildings.exists:
+            building = production_buildings.first
+            unit_count = self.units(unit_to_train).amount
+
+            if unit_count < max_units and building.noqueue and self.can_afford(unit_to_train):
+                await self.do(building.train(unit_to_train))
+
+    async def gather_resources(self):
+        # Gather resources with SCVs
+        for cc in self.units(units.Terran.CommandCenter).ready:
+            mineral_field = self.state.mineral_field.closer_than(10.0, cc)
+            for scv in self.units(units.Terran.SCV).ready.noqueue:
+                if mineral_field.exists:
+                    target = mineral_field.closest_to(scv)
+                    await self.do(scv.gather(target))
+
+                # If there are no more mineral fields, gather gas
+                else:
+                    vespene_geyser = self.state.vespene_geyser.closer_than(10.0, cc)
+                    if vespene_geyser.exists:
+                        target = vespene_geyser.closest_to(cc)
+                        await self.do(scv.gather(target))
+
+    async def expand_now(self):
+        # Select SCV and location to build Command Center
+        scv = self.workers.random
+        location = await self.get_next_expansion()
+        await self.do(scv.build(units.Terran.CommandCenter, location))
+
+    async def get_next_expansion(self):
+        # Get the next expansion location
+        expansion_locations = self.expansion_locations
+        if not expansion_locations:
+            return None
+        cc = self.units(units.Terran.CommandCenter)
+        if cc.exists:
+            current_expansions = [cc.closest_to(expansion) for expansion in expansion_locations]
+            return await self.get_best_location(expansion_locations, current_expansions)
+        return await self.get_best_location(expansion_locations)
+
+    async def get_best_location(self, locations, avoid=None):
+        # Get the best location to build
+        if avoid is None:
+            avoid = []
+        distances = await self._client.query_pathing(self.units.structure.position, locations)
+        if not distances:
+            return None
+        distances = np.array(distances)
+        if avoid:
+            avoid = np.array([a.position for a in avoid])
+            distances += np.any(np.isclose(avoid[None, :, :], locations[:, None, :], atol=2.0), axis=2) * 1000.0
+        best_loc = np.argmax(distances)
+        return locations[best_loc]
+
+
+
+In this example, the manage_economy method focuses on building additional Command Centers, training workers, and gathering resources with SCVs. The
