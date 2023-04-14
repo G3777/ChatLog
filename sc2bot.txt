@@ -1231,3 +1231,76 @@ class AdvancedAgent(base_agent.BaseAgent):
 
 
 Keep in mind that this example assumes you have already implemented methods for managing resources, building structures, and other essential tasks in your AdvancedAgent. The provided code is based on the previously provided AdvancedAgent template, and you may need to adapt it to your specific implementation.
+--------------------------
+Got actions = self.decide_action(self.obs)
+AttributeError: 'AdvancedAgent' object has no attribute 'obs'
+--------------------------
+The error message "AttributeError: 'AdvancedAgent' object has no attribute 'obs'" suggests that the obs attribute is not defined in your AdvancedAgent class.
+
+The obs attribute is used to store the current game observation data, which is passed to many of the methods in your AdvancedAgent class. To fix this error, you need to make sure that the obs attribute is defined in your class.
+
+Here's an example of how to define the obs attribute in your AdvancedAgent class:
+
+python
+Copy code
+class AdvancedAgent(base_agent.BaseAgent):
+    def __init__(self):
+        super().__init__()
+        self.obs = None
+
+    async def on_step(self, iteration):
+        self.obs = await self.observe()
+        actions = self.decide_action(self.obs)
+        # ...
+
+
+In this example, the __init__ method of the AdvancedAgent class initializes the obs attribute to None. Then, in the on_step method, the obs attribute is set to the current observation data using the await self.observe() method.
+
+With this change, you should be able to access the obs attribute from within your AdvancedAgent class without encountering the AttributeError message.
+--------------------------
+Add the observe() method
+--------------------------
+Sure! Here's an example of how to implement an observe method in your AdvancedAgent class:
+
+python
+Copy code
+from pysc2.lib import actions, features, units
+
+class AdvancedAgent(base_agent.BaseAgent):
+    def __init__(self):
+        super().__init__()
+        self.obs = None
+
+    async def on_step(self, iteration):
+        self.obs = await self.observe()
+        actions = self.decide_action(self.obs)
+        # ...
+
+    async def observe(self):
+        # Get the observation data from the game state
+        game_state = await self._client.observation()
+
+        # Extract relevant features from the observation data
+        player_relative = features.SCREEN_FEATURES.player_relative.index
+        unit_type = features.SCREEN_FEATURES.unit_type.index
+        player_y, player_x = (game_state.observation['minimap'][player_relative] == features.PlayerRelative.SELF).nonzero()
+        player_units = game_state.observation['feature_screen'][unit_type] == units.Terran.SCV
+        mineral_fields = game_state.observation['feature_screen'][unit_type] == units.Neutral.MineralField
+
+        # Construct a dictionary of relevant observation data
+        obs_dict = {
+            'game_state': game_state,
+            'player_x': player_x.mean(),
+            'player_y': player_y.mean(),
+            'player_units': player_units,
+            'mineral_fields': mineral_fields,
+        }
+
+        return obs_dict
+
+
+In this example, the observe method retrieves the current observation data from the game state using the await self._client.observation() method. It then extracts relevant features from the observation data, such as the location of the player's units and the location of mineral fields.
+
+The observation data is then stored in a dictionary called obs_dict, which includes the game_state object as well as other relevant information such as the location of the player's units and mineral fields.
+
+Finally, the obs_dict dictionary is returned by the observe method and stored in the obs attribute of the AdvancedAgent class. This allows the observation data to be accessed by other methods in the class, such as the on_step method.
