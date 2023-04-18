@@ -1,0 +1,239 @@
+强化学习 基础算法
+--------------------------
+强化学习（Reinforcement Learning，简称 RL）是一种机器学习方法，其目标是让智能体（agent）在与环境的交互过程中学会做出最优的决策。在强化学习中，智能体在给定的状态（state）下采取行动（action），环境根据这个行动给出一个奖励（reward）和新的状态。智能体的目标是最大化累积奖励。
+
+以下是一些基础的强化学习算法：
+
+Q-learning：一种值迭代（Value Iteration）算法，旨在估计每个状态-行动对的价值（Q-value）。Q-learning 是一种无模型（model-free）算法，不需要知道环境的转移概率和奖励函数。通过更新 Q 值表，智能体可以选择具有最高 Q 值的行动来最大化奖励。
+
+Sarsa（State-Action-Reward-State-Action）：与 Q-learning 类似，Sarsa 也是一种值迭代算法，但它是基于动作-值（action-value）函数的在线更新。在每个时间步，Sarsa 根据当前状态和行动、奖励、下一个状态和行动来更新 Q 值。
+
+Deep Q-Networks（DQN）：将深度学习与 Q-learning 结合，利用神经网络来估计 Q 值。DQN 使用经验回放（experience replay）和目标网络（target network）来解决 Q-learning 中的不稳定和发散问题。
+
+Policy Gradient（策略梯度）：这类算法直接优化智能体的策略（policy），而非像 Q-learning 和 Sarsa 那样优化值函数。策略梯度根据累积奖励来更新策略参数。常见的策略梯度算法包括 REINFORCE 和 Actor-Critic 系列方法。
+
+Proximal Policy Optimization（PPO）：是一种策略梯度算法，通过限制策略更新的幅度来提高训练稳定性。PPO 可以在许多任务中实现高效的学习。
+
+Soft Actor-Critic（SAC）：这是一种基于 Actor-Critic 的算法，采用最大熵强化学习框架。SAC 通过在优化策略的同时学习值函数来平衡探索和利用。
+
+这些基础算法是强化学习领域的起点。随着研究的深入，越来越多的算法和技巧不断涌现，以应对各种复杂的问题和场景。
+--------------------------
+SMAC
+--------------------------
+SMAC（StarCraft Multi-Agent Challenge）是一个基于 StarCraft II 的多智能体竞争环境，旨在推动强化学习研究中的多智能体协同和竞争。StarCraft II 是一款实时战略游戏，具有高度复杂的状态空间、大量的行动空间以及需要战术和战略协同的多智能体场景。这些特点使得 StarCraft II 成为研究多智能体强化学习（MARL）的理想平台。
+
+SMAC 提供了一组特定的 StarCraft II 地图和任务，设计了对应的 Python 接口，方便研究人员测试和评估多智能体强化学习算法。SMAC 的目标是解决以下挑战：
+
+部分观测性：每个智能体只能观察到其视野范围内的信息，使得状态空间变得部分可观察。
+多智能体协同：智能体需要协作完成任务，例如共同攻击敌方单位或保卫友方单位。
+高维动作空间：智能体在游戏中有多种可行的动作，如移动、攻击和使用技能。
+离散和连续行动：智能体需要处理离散和连续的行动，例如选择攻击目标（离散）和移动位置（连续）。
+动态任务：任务可能随着时间的推移而发生变化，如敌方单位的出现和友方单位的损失。
+
+在 SMAC 中，研究人员可以尝试各种强化学习算法，如 Q-learning、DQN、Policy Gradient、Actor-Critic、PPO、MADDPG（Multi-Agent Deep Deterministic Policy Gradient）等，以应对多智能体协作和竞争的挑战。在实际应用中，研究人员通常需要针对具体问题定制算法，以解决部分观测性、通信、协同和竞争等问题。
+--------------------------
+rllib algorithm
+--------------------------
+RLlib 是一个开源的强化学习库，由 Ray 提供支持。它提供了一套统一的 API，使研究人员和开发人员能够轻松地实现和扩展各种强化学习算法。RLlib 支持多种算法，包括但不限于以下几种：
+
+Proximal Policy Optimization (PPO)：一种策略梯度算法，通过限制策略更新的幅度来提高训练稳定性。PPO 可以在许多任务中实现高效的学习。
+
+Deep Q-Networks (DQN)：将深度学习与 Q-learning 结合，利用神经网络来估计 Q 值。DQN 使用经验回放（experience replay）和目标网络（target network）来解决 Q-learning 中的不稳定和发散问题。
+
+Soft Actor-Critic (SAC)：这是一种基于 Actor-Critic 的算法，采用最大熵强化学习框架。SAC 通过在优化策略的同时学习值函数来平衡探索和利用。
+
+Asynchronous Advantage Actor-Critic (A3C)：一种并行的 Actor-Critic 算法，多个智能体在不同的环境中独立学习，最终将梯度汇总更新全局模型。A3C 能够加速训练过程并提高稳定性。
+
+Distributed Prioritized Experience Replay (DPER)：一种分布式的 Q-learning 算法，使用优先级经验回放（Prioritized Experience Replay）来加速学习过程。DPER 可以在多个环境中并行采样，同时利用优先级排序来更高效地学习。
+
+Multi-Agent Deep Deterministic Policy Gradient (MADDPG)：针对多智能体环境的深度确定性策略梯度算法。MADDPG 对每个智能体使用一个独立的 Actor-Critic 结构，并在训练过程中共享信息。
+
+Importance Weighted Actor-Learner Architectures (IMPALA)：一种分布式的强化学习框架，通过多个 actor 生成训练数据，并由一个中心 learner 进行训练。IMPALA 使用重要性加权（importance weighting）来纠正来自不同 actor 的梯度偏差。
+
+RLlib 为这些算法提供了高度优化的实现，支持分布式计算、GPU 加速以及多智能体环境。通过 RLlib，研究人员可以更快地进行实验、比较不同算法，并将算法扩展到实际应用。
+--------------------------
+使用RLlib和smac和pysc2
+--------------------------
+要使用 RLlib、SMAC 和 PySC2 一起进行强化学习研究，你需要按照以下步骤操作：
+
+安装所需的库和软件包：
+
+确保已经安装了 Python（建议使用 3.6 或更高版本）。然后，安装 RLlib、SMAC 和 PySC2：
+
+bash
+Copy code
+pip install ray[rllib]
+pip install sc2
+pip install git+https://github.com/oxwhirl/smac.git
+
+安装 StarCraft II：
+
+根据你的操作系统，从 Blizzard 的官方网站下载并安装 StarCraft II。对于研究目的，你可以安装免费的 StarCraft II 客户端。
+
+下载 SMAC 地图：
+
+从 SMAC GitHub 仓库 (https://github.com/oxwhirl/smac) 下载地图，并将它们解压到 StarCraft II 的地图文件夹。通常，文件夹路径如下：
+
+Windows：C:\Program Files (x86)\StarCraft II\Maps
+macOS：/Applications/StarCraft II/Maps
+Linux：~/StarCraftII/Maps
+创建自定义的环境：
+
+要在 RLlib 中使用 SMAC，你需要创建一个自定义的环境。这里是一个简单的例子：
+
+python
+Copy code
+from smac.env import StarCraft2Env
+import gym
+
+class SMACWrapper(gym.Env):
+    def __init__(self, env_config):
+        self.env = StarCraft2Env(map_name="2s3z")
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+
+    def reset(self):
+        return self.env.reset()
+
+    def step(self, actions):
+        return self.env.step(actions)
+
+    def close(self):
+        self.env.close()
+
+
+在这个示例中，我们创建了一个继承自 gym.Env 的 SMACWrapper 类，并使用了名为 "2s3z" 的地图。你可以根据需要替换为其他地图。
+
+配置 RLlib：
+
+接下来，你需要配置 RLlib 来使用 PPO 算法并指定自定义环境。这里是一个例子：
+
+python
+Copy code
+import ray
+from ray import tune
+from ray.rllib.agents.ppo import PPOTrainer
+
+ray.init()
+
+config = {
+    "env": SMACWrapper,
+    "num_workers": 4,
+    "num_gpus": 1,
+    "framework": "torch",  # 或者 "tf" 如果你使用 TensorFlow
+}
+
+tune.run(PPOTrainer, config=config, stop={"timesteps_total": 1000000}, checkpoint_at_end=True)
+
+
+这个配置示例使用了 PPOTrainer，指定了自定义的 SMACWrapper 环境，并将其运行 1,000,000 个时间步。你可以根据需要调整这些设置。
+
+运行上述代码，RLlib 将使用 PPO 算法在 StarCraft II 的 SMAC 环境中进行训练。注意训练可能需要大量计算资源和时间。根据你的硬件配置和问题复杂性，可能需要几小时
+--------------------------
+Please write a sample
+--------------------------
+Here's a full example of using RLlib, SMAC, and PySC2 to train a PPO agent in the StarCraft II environment:
+
+python
+Copy code
+import ray
+from ray import tune
+from ray.rllib.agents.ppo import PPOTrainer
+import gym
+from smac.env import StarCraft2Env
+
+class SMACWrapper(gym.Env):
+    def __init__(self, env_config):
+        self.env = StarCraft2Env(map_name="2s3z")
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+
+    def reset(self):
+        return self.env.reset()
+
+    def step(self, actions):
+        return self.env.step(actions)
+
+    def close(self):
+        self.env.close()
+
+def train_smac():
+    ray.init()
+    
+    config = {
+        "env": SMACWrapper,
+        "num_workers": 4,
+        "num_gpus": 1,
+        "framework": "torch",  # 或者 "tf" 如果你使用 TensorFlow
+    }
+    
+    tune.run(PPOTrainer, config=config, stop={"timesteps_total": 1000000}, checkpoint_at_end=True)
+
+if __name__ == "__main__":
+    train_smac()
+
+
+This script first defines the SMACWrapper class that wraps the SMAC environment to be compatible with RLlib. Next, it defines the train_smac function that initializes Ray, sets up the configuration for the PPO trainer, and starts the training process. Finally, the script calls the train_smac function in the __main__ block.
+
+To run this script, simply save it as a Python file (e.g., smac_rllib_example.py) and execute it with Python:
+
+bash
+Copy code
+python smac_rllib_example.py
+
+
+The training process will start and run for 1,000,000 timesteps. Remember that this training can be computationally expensive and time-consuming depending on the problem complexity and hardware setup.
+--------------------------
+Please write an example for training marine
+--------------------------
+Here's a full example of using RLlib, SMAC, and PySC2 to train a PPO agent in the StarCraft II environment, focusing on the marine unit:
+
+python
+Copy code
+import ray
+from ray import tune
+from ray.rllib.agents.ppo import PPOTrainer
+import gym
+from smac.env import StarCraft2Env
+
+class SMACMarineWrapper(gym.Env):
+    def __init__(self, env_config):
+        self.env = StarCraft2Env(map_name="1m_vs_1zg")  # A simple map with 1 marine and 1 zealot
+        self.action_space = self.env.action_space
+        self.observation_space = self.env.observation_space
+
+    def reset(self):
+        return self.env.reset()
+
+    def step(self, actions):
+        return self.env.step(actions)
+
+    def close(self):
+        self.env.close()
+
+def train_marine_smac():
+    ray.init()
+    
+    config = {
+        "env": SMACMarineWrapper,
+        "num_workers": 4,
+        "num_gpus": 1,
+        "framework": "torch",  # Change to "tf" if you are using TensorFlow
+    }
+    
+    tune.run(PPOTrainer, config=config, stop={"timesteps_total": 1000000}, checkpoint_at_end=True)
+
+if __name__ == "__main__":
+    train_marine_smac()
+
+
+In this example, we've modified the SMACWrapper class to SMACMarineWrapper and set the map_name to "1m_vs_1zg", which is a simple map containing 1 marine and 1 zealot. This will focus the training on marine unit strategy.
+
+To run this script, save it as a Python file (e.g., marine_smac_rllib_example.py) and execute it with Python:
+
+bash
+Copy code
+python marine_smac_rllib_example.py
+
+
+The training process will start and run for 1,000,000 timesteps. As before, be aware that the training can be computationally expensive and time-consuming, depending on the problem complexity and hardware setup.
